@@ -2,6 +2,7 @@ import os
 import time
 import copy
 import torch
+import pandas as pd
 
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
@@ -55,11 +56,13 @@ def _train_model_av_losses(model, dataloader, optimizer, criterion,
 
         video_data = video_data.to(device)
         audio_data = audio_data.to(device)
+        #print("audio shape", audio_data.shape)
         av_label = av_label.to(device)
         audio_label = audio_label.to(device)
 
         optimizer.zero_grad()
         with torch.set_grad_enabled(True):
+            #av_out, a_out, v_out, _ = model(audio_data, video_data)
             av_out, a_out, v_out, _ = model(audio_data, video_data)
             _, preds = torch.max(av_out, 1)
 
@@ -142,10 +145,40 @@ def _test_model_av_losses(model, dataloader, optimizer, criterion, scheduler, de
 
     epoch_auc = roc_auc_score(label_lst, pred_lst)
     epoch_ap = average_precision_score(label_lst, pred_lst)
+
+    #print("length", len(pred_lst))
+    #_save_predictions_to_csv(label_lst, pred_lst, original_csv_path="/home2/bstephenson/WASD/WASD/csv/val_orig.csv", output_csv_path="/home2/bstephenson/active-speakers-context/predictions.csv")
+
     print('AV Loss: {:.4f}  A Loss: {:.4f}  V Loss: {:.4f} Acc: {:.4f} auROC: {:.4f} AP: {:.4f}'.format(
           epoch_loss_av, epoch_loss_a, epoch_loss_v, epoch_acc, epoch_auc, epoch_ap))
 
     return epoch_loss_av, epoch_loss_a, epoch_loss_v, epoch_auc, epoch_ap
+
+"""
+def _save_predictions_to_csv(labels, predictions, original_csv_path="/home2/bstephenson/WASD/WASD/csv/val_orig.csv", output_csv_path="/home2/bstephenson/active-speakers-context/predictions.csv"):
+    # Load the original CSV
+    original_df = pd.read_csv(original_csv_path)
+
+    # Ensure the original CSV has the expected columns
+    if 'entity_id' not in original_df.columns or 'frame_timestamp' not in original_df.columns:
+        raise ValueError("Original CSV must contain 'entity_id' and 'frame_timestamp' columns.")
+
+    # Extract relevant columns
+    entity_ids = original_df['entity_id']
+    frame_timestamps = original_df['frame_timestamp']
+
+    # Create a DataFrame with the necessary columns
+    results_df = pd.DataFrame({
+        'entity_id': entity_ids,
+        'frame_timestamp': frame_timestamps,
+        'label': labels,
+        'prediction': predictions
+    })
+
+    # Save the DataFrame to a CSV file
+    results_df.to_csv(output_csv_path, index=False)
+    print(f"Predictions saved to {output_csv_path}")
+"""
 
 
 def optimize_asc(model, dataloader_train, data_loader_val, device,

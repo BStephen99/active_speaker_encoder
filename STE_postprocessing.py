@@ -41,13 +41,13 @@ def select_files(pred_source, gt_source):
 
 
 if __name__ == '__main__':
-    forward_dir = '.../Forwards/ActiveSpeakers/publish' #Directory where you store the network predcitons
+    forward_dir = '/home2/bstephenson/active-speakers-context/Forwards/ActiveSpeakers/publish' #Directory where you store the network predcitons
     ava_ground_truth_dir = '.../AVA/csv/val' #AVA original ground truth files
     temporary_dir = '.../temp/activeSpeakers' #Just an empty temporary dir
 
     # The script will generate these two, use them for the official AVA evaluation
-    dataset_predictions_csv = '.../Forwards/ActiveSpeakers/publish/final/STE.csv'  #file with final predictions
-    dataset_gt_csv = '...Forwards/ActiveSpeakers/publish/final/gt.csv' # Utility file to use the official evaluation tool
+    dataset_predictions_csv = '/home2/bstephenson/active-speakers-context/Forwards/ActiveSpeakers/publish/final/STE.csv'  #file with final predictions
+    dataset_gt_csv = '/home2/bstephenson/active-speakers-context/Forwards/ActiveSpeakers/publish/final/gt.csv' # Utility file to use the official evaluation tool
 
     #cleanup temp dir
     del_files = glob.glob(temporary_dir+'/*')

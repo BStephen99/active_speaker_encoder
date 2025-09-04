@@ -183,13 +183,18 @@ class TwoStreamResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc_128_a = nn.Linear(512 * block.expansion, 128)
-        self.fc_128_v = nn.Linear(512 * block.expansion, 128)
+        #self.fc_128_a = nn.Linear(512 * block.expansion, 128)
+        #self.fc_128_v = nn.Linear(512 * block.expansion, 128)
+
+        self.fc_512_a = nn.Linear(512 * block.expansion, 512)
+        self.fc_512_v = nn.Linear(512 * block.expansion, 512)
 
         # prediction heads
+        self.fc_combined = nn.Linear(512*2, 512*2)
+        self.fc_penultimate = nn.Linear(512*2, 128*2)
         self.fc_final = nn.Linear(128*2, num_classes)
-        self.fc_aux_a = nn.Linear(128, num_classes)
-        self.fc_aux_v = nn.Linear(128, num_classes)
+        self.fc_aux_a = nn.Linear(512, num_classes)
+        self.fc_aux_v = nn.Linear(512, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -273,9 +278,9 @@ class TwoStreamResNet(nn.Module):
         #print("******")
 
         # auxiliary supervisions
-        a = self.fc_128_a(a)
+        a = self.fc_512_a(a)
         a = self.relu(a)
-        v = self.fc_128_v(v)
+        v = self.fc_512_v(v)
         v = self.relu(v)
 
         aux_a = self.fc_aux_a(a)
@@ -284,9 +289,12 @@ class TwoStreamResNet(nn.Module):
         # global supervision
         av = torch.cat((a, v), 1)
 
+        com = self.fc_combined(av)
+        print(com.shape)
+        av = self.fc_penultimate(com)
         x = self.fc_final(av)
 
-        return x, aux_a, aux_v, stream_feats
+        return x, aux_a, aux_v, stream_feats, com
 
 
 def make_temporal_shift(net, n_segment, n_div=8):
@@ -356,21 +364,10 @@ def _two_stream_resnet(arch, block, layers, pretrained, progress, rgb_stack_size
         make_temporal_shift(model, rgb_stack_size)
     ###changed**********************************************
     #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder/100.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/GraVi-T/resnet18-tsm-aug.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder/200Cleaned.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder/11.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_overlapNoise/4.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_WASD/89.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_AllCombined/Alltogether29.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_AllCombined/88.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_AllCombined_FilteredSet/60.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_OURS_FilteredSet/60.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home/brooke/Documents/active-speakers-context/model/ste_encoder_AVA/AVA76.pth'))
-    model = manual_load_state_dict(model, torch.load('/home/brooke/Documents/active-speakers-context/active-speakers-context/model/ste_encoder_OURS_FilteredSet/60.pth'))
-    #print("load resnet model")
-    #print(pretrained)
-    #model = manual_load_state_dict(model, torch.load(pretrained))
-    print("load gravit model@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+    model = manual_load_state_dict(model, torch.load('/home2/bstephenson/GraVi-T/resnet18-tsm-aug.pth'))
+    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder/3.pth'))
+    print("load resnet model")
+    print("load gravit model")
     return model
 
 
@@ -381,8 +378,9 @@ def manual_load_state_dict(model, weight_state_dict):
         #print(name)
         if 'module.' in name:
             name = name.replace('module.', '')
-        own_state[name].copy_(param)
-
+        if name in own_state:
+            if param.shape == own_state[name].shape:
+                own_state[name].copy_(param)
     return model
 
 
@@ -396,7 +394,6 @@ def resnet18_two_streams_forward(pretrained_weights_path, progress=True, rgb_sta
     model = _two_stream_resnet('resnet18', BasicBlock, [2, 2, 2, 2], False, progress,
                                rgb_stack_size, num_classes, **kwargs)
     model = manual_load_state_dict(model, torch.load(pretrained_weights_path, map_location=torch.device('cpu')))
-    print(pretrained_weights_path)
     print("manually load pretrained")
     model.eval()
     return model

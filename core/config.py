@@ -2,17 +2,34 @@ import sys
 
 import torch.nn as nn
 import torch.optim as optim
+#import core.modelsOrig as mdet
 import core.models as mdet
+#import core.modelsCrossModality as mdet
 
 STE_inputs = {
     # input files
-    'csv_train_full': '.../ava_activespeaker_train_augmented.csv',
-    'csv_val_full': '.../ava_activespeaker_val_augmented.csv',
+    #'csv_val_full': '/home2/bstephenson/ASDNet/ava_activespeaker_train_augmented.csv',
+    'csv_val_full': '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/ava_activespeaker_val_augmented.csv',
+    #'csv_val_full': '/home2/bstephenson/ASDNet/ava_activespeaker_test_augmented.csv',
+    #csv_val_full: '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/ava_activespeaker_val_augmented.csv',
+    #csv_val_full: '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/oursBackTest.csv',
+    #'csv_val_full': '/home2/bstephenson/ASDNet/oursHighTrain.csv',
+    #'csv_val_full': '/home2/bstephenson/ASDNet/oursHighTrain.csv',
+    #'csv_val_full': '/home2/bstephenson/ASDNet/oursHighTest.csv',
+
+    #'csv_val_full':'/home2/bstephenson/WASD/WASD/csv/train_orig.csv',
+    #'csv_val_full':'/home2/bstephenson/WASD/WASD/csv/val_orig.csv',
 
     # Data config
-    'audio_dir': '..../instance_wavs_time/',
-    'video_dir': '..../instance_crops_time/',
-    'models_out': '...'
+    #'audio_dir': '..../instance_wavs_time/',
+    'audio_dir': '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/slice_audio',
+    #'audio_dir': '/home2/bstephenson/ASDNet/slice_audio_ours/',
+    #'audio_dir':'/home2/bstephenson/WASD/WASD/clips_audios/',
+    'video_dir': '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/crops',
+    #'video_dir': '/home2/bstephenson/ASDNet/cropsOurs/',
+    #'video_dir': '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/cropsOurs/back',
+    #'video_dir':"/home2/bstephenson/WASD/WASD/clips_videos/",
+    'models_out':'/home/brooke/Documents/active-speakers-context/active-speakers-context/model'
 }
 
 ASC_inputs = {
@@ -45,6 +62,7 @@ STE_optimization_params = {
 
     # Batch Config
     'batch_size': 64,
+    #'batch_size': 32,
     'threads': 4
 }
 

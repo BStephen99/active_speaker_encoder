@@ -4,15 +4,23 @@ import glob
 import time
 import random
 import torch
+import ast
 
 from PIL import Image
 from torch.utils import data
 from torchvision.transforms import RandomCrop
 
+
+#from speechbrain.inference.speaker import EncoderClassifier
+#classifier = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
+
 import numpy as np
 import core.io as io
 import core.clip_utils as cu
 import multiprocessing as mp
+
+
+
 
 class CachedAVSource(data.Dataset):
     def __init__(self):
@@ -26,29 +34,41 @@ class CachedAVSource(data.Dataset):
         np.random.seed(0)
 
     def _postprocess_speech_label(self, speech_label):
-        speech_label = int(speech_label)
+        speech_label = int(float(speech_label)) # int(speech_label)
         if speech_label == 2:  # Remember 2 = SPEAKING_NOT_AUDIBLE
-            speech_label = 0
+            speech_label = 1
         return speech_label
 
     def _postprocess_entity_label(self, entity_label):
-        entity_label = int(entity_label)
+        entity_label = int(float(entity_label)) #int(entity_label)
         if entity_label == 2:  # Remember 2 = SPEAKING_NOT_AUDIBLE
-            entity_label = 0
+            entity_label = 1
         return entity_label
+
+
 
     def _cache_entity_data(self, csv_file_path):
         entity_set = set()
-
+        print(csv_file_path)
         csv_data = io.csv_to_list(csv_file_path)
+        #print(csv_data[0])
+        videoIndex = csv_data[0].index("video_id")
+        entityIndex = csv_data[0].index("entity_id")
+        timeIndex = csv_data[0].index("frame_timestamp")
+        labelIndex = csv_data[0].index("label_id")
         csv_data.pop(0)  # CSV header
         for csv_row in csv_data:
-            video_id = csv_row[0]
-            entity_id = csv_row[-3]
-            timestamp = csv_row[1]
+            #video_id = csv_row[0]
+            video_id = csv_row[videoIndex]
+            #entity_id = csv_row[-3]
+            entity_id = csv_row[entityIndex]
+            #timestamp = csv_row[1]
+            timestamp = csv_row[timeIndex]
 
-            speech_label = self._postprocess_speech_label(csv_row[-2])
-            entity_label = self._postprocess_entity_label(csv_row[-2])
+            #speech_label = self._postprocess_speech_label(csv_row[-2])
+            speech_label = self._postprocess_speech_label(csv_row[labelIndex])
+            #entity_label = self._postprocess_entity_label(csv_row[-2])
+            entity_label = self._postprocess_entity_label(csv_row[labelIndex])
             minimal_entity_data = (entity_id, timestamp, entity_label)
 
             # Store minimal entity data
@@ -75,16 +95,41 @@ class CachedAVSource(data.Dataset):
         entity_list = list()
 
         csv_data = io.csv_to_list(csv_file_path)
+        videoIndex = csv_data[0].index("video_id")
+        entityIndex = csv_data[0].index("entity_id")
+        timeIndex = csv_data[0].index("frame_timestamp")
+        labelIndex = csv_data[0].index("label_id")   
         csv_data.pop(0)  # CSV header
+        #if "2209" in csv_file_path and "H" in csv_file_path:
+        #    dataOrigin = 0
+        #print(csv_file_path)
+        if "2209" in csv_file_path:
+            dataOrigin = 1
+        else:
+            dataOrigin = 0
         for csv_row in csv_data:
-            video_id = csv_row[0]
-            if video_id != target_video:
+            video_id = csv_row[videoIndex]
+
+            #video_id = csv_row[0+dataOrigin]
+            print(video_id)
+            if target_video not in video_id:
                 continue
 
-            entity_id = csv_row[-3]
-            timestamp = csv_row[1]
-            entity_label = self._postprocess_entity_label(csv_row[-2])
+            entity_id = csv_row[entityIndex]
+            timestamp = csv_row[timeIndex]
 
+            #entity_id = csv_row[-3 - dataOrigin]
+            #entity_id = csv_row[-5]
+            #entity_id = csv_row[10]
+            print(entity_id)
+            #timestamp = csv_row[1 + dataOrigin]
+            print(timestamp)
+
+            #entity_label = self._postprocess_entity_label(csv_row[-2-dataOrigin])
+            entity_label = self._postprocess_entity_label(csv_row[labelIndex])
+            #entity_label = 1
+
+            print("*****************")
             entity_list.append((video_id, entity_id, timestamp))
             minimal_entity_data = (entity_id, timestamp, entity_label) # sfate to ingore label here
 
@@ -104,6 +149,7 @@ class CachedAVSource(data.Dataset):
         all_disk_data = set(os.listdir(self.video_root))
         for video_id, entity_id in entity_set.copy():
             if entity_id not in all_disk_data:
+                #print(video_id)
                 entity_set.remove((video_id, entity_id))
         print('Pruned not in disk', len(entity_set))
         self.entity_list = sorted(list(entity_set))
@@ -138,15 +184,26 @@ class AudioVideoDatasetAuxLosses(CachedAVSource):
         video_id, entity_id = self.entity_list[index]
         entity_metadata = self.entity_data[video_id][entity_id]
 
+        randomNoiseIndex = random.randint(0, len(self.entity_list)-1)
+        noise_video_id, noise_entity_id = self.entity_list[randomNoiseIndex]
+        noise_metadata = self.entity_data[noise_video_id][noise_entity_id]
+
         audio_offset = float(entity_metadata[0][1])
         mid_index = random.randint(0, len(entity_metadata)-1)
+        noise_mid_index = random.randint(0, len(noise_metadata)-1)
         midone = entity_metadata[mid_index]
         target = int(midone[-1])
         target_audio = self.speech_data[video_id][midone[1]]
 
         clip_meta_data = cu.generate_clip_meta(entity_metadata, mid_index,
                                                self.half_clip_length)
-        video_data, audio_data = io.load_av_clip_from_metadata(clip_meta_data,
+        noise_meta_data = cu.generate_clip_meta(noise_metadata, noise_mid_index,
+                                               self.half_clip_length)
+
+        #video_data, audio_data, speakerEmb_np = io.load_av_clip_from_metadata(clip_meta_data, noise_meta_data,
+        #                         self.video_root, self.audio_root, audio_offset,
+        #                         self.target_size)
+        video_data, audio_data, speakerEmb_np = io.load_av_clip_from_metadata(clip_meta_data,
                                  self.video_root, self.audio_root, audio_offset,
                                  self.target_size)
 
@@ -165,6 +222,7 @@ class AudioVideoDatasetAuxLosses(CachedAVSource):
             video_data = [self.video_transform(vd) for vd in video_data]
 
         video_data = torch.cat(video_data, dim=0)
+        video_data = video_data.view(11, 3,  144, 144)
         return (np.float32(audio_data), video_data), target, target_audio
 
 
@@ -187,7 +245,8 @@ class AudioVideoDatasetAuxLossesForwardPhase(CachedAVSource):
         self.half_clip_length = math.floor(self.clip_lenght/2)
         self.target_size = target_size
 
-        self.entity_list = self._cache_entity_data_forward(csv_file_path, self.target_video )
+
+        self.entity_list = self._cache_entity_data_forward(csv_file_path, self.target_video)
         print('len(self.entity_list)', len(self.entity_list))
 
     def _where_is_ts(self, entity_metadata, ts):
@@ -212,7 +271,7 @@ class AudioVideoDatasetAuxLossesForwardPhase(CachedAVSource):
 
         clip_meta_data = cu.generate_clip_meta(entity_metadata, mid_index,
                                                self.half_clip_length)
-        video_data, audio_data = io.load_av_clip_from_metadata(clip_meta_data,
+        video_data, audio_data, speakerEmb = io.load_av_clip_from_metadata(clip_meta_data,
                                  self.video_root, self.audio_root, audio_offset,
                                  self.target_size)
 
@@ -231,7 +290,8 @@ class AudioVideoDatasetAuxLossesForwardPhase(CachedAVSource):
             video_data = [self.video_transform(vd) for vd in video_data]
 
         video_data = torch.cat(video_data, dim=0)
-        return np.float32(audio_data), video_data, video_id, ts, entity_id, gt
+
+        return np.float32(audio_data), video_data, video_id, ts, entity_id, gt, speakerEmb
 
 #ASC Datasets
 class ContextualDataset(data.Dataset):

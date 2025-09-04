@@ -1,2 +1,8 @@
 *.pyc
 *.h5
+
+allAVAval/
+*.csv
+
+model/*
+!model/.gitkeep
