@@ -1,8 +1,8 @@
 # PepperMint Role — Short-Term Encoder  
 
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)]()  
+[![Python]]()  #This code was tested with Python 3.13.5.
 [![Conda](https://img.shields.io/badge/conda-env-green.svg)]()  
-[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)]()  
+
 
 This repository contains the code used to train the **short-term encoder** for the baseline model of the **PepperMint Role dataset**.  
 
