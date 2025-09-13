@@ -1,6 +1,7 @@
 import os
 import torch
 import pandas as pd
+import core.config as exp_conf
 
 
 class Logger():
@@ -43,19 +44,29 @@ def clean_filename(filename):
     return cleaned_filename
 
 def load_val_video_set():
-    #files = os.listdir('.../AVA/csv/val')
-    #files = os.listdir('/home2/bstephenson/GraVi-T/data/annotations/ava_activespeaker_test_v1.0')
-    #files = os.listdir('/home2/bstephenson/GraVi-T/data/annotations/ava_activespeaker_train_v1.0')
-    #videos = pd.read_csv("/home2/bstephenson/ASDNet/ava_activespeaker_train_augmented.csv")["video_id"].unique()
-    #videos = [f[:-18] for f in files]
-    #videos = pd.read_csv('/home2/bstephenson/ASDNet/avaStyleCSV.csv')["video_id"].tolist()
-    #videos = pd.read_csv('/home2/bstephenson/ASDNet/ava220926.csv')["video_id"].unique().tolist()
-    #videos = pd.read_csv('/home2/bstephenson/ASDNet/oursHighTest.csv')["video_id"].unique().tolist()
-    #videos = pd.read_csv('/home2/bstephenson/ASDNet/oursHighTest.csv')["video_id"].unique().tolist()
-    videos = pd.read_csv('/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/ava_activespeaker_val_augmented.csv')["video_id"].unique().tolist()
-    #videos = pd.read_csv('/home2/bstephenson/WASD/WASD/csv/train_orig.csv')["video_id"].unique().tolist()
-    #videos = pd.read_csv('/home2/bstephenson/WASD/WASD/csv/val_orig.csv')["video_id"].unique().tolist()
-    #videos = [clean_filename(v) for v in videos]
-    #videos = pd.read_csv('/home2/bstephenson/ASDNet/ava220926downsample.csv')["video_id"].unique().tolist()
+
+    io_config = exp_conf.STE_inputs
+
+    mode = io_config['mode']
+
+    if mode == "ava_train":
+        csv_file = io_config['ava_csv_train_full']
+    elif mode == "ava_val":
+        csv_file = io_config['ava_csv_val_full']
+    elif mode == "pepper_back":
+        csv_file = io_config['csv_train_full']
+    elif mode == "pepper_high":
+        csv_file = io_config['csv_train_full']
+    elif mode == "wasd_train":
+        csv_file = io_config['wasd_csv_train_full']
+    elif mode == "wasd_val":
+        csv_file = io_config['wasd_csv_val_full']
+    else:
+        raise ValueError(f"Unsupported mode: {mode}")
+
+    # Read unique video IDs from the appropriate CSV
+    videos = pd.read_csv(csv_file)["video_id"].unique().tolist()
+
+
     videos.sort()
     return videos

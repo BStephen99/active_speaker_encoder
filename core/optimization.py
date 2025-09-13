@@ -13,6 +13,7 @@ def optimize_av_losses(model, dataloader_train, data_loader_val, device,
                        models_out=None, log=None):
 
     for epoch in range(num_epochs):
+
         print()
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
@@ -84,6 +85,7 @@ def _train_model_av_losses(model, dataloader, optimizer, criterion,
         running_loss_v += loss_v.item()
         running_corrects += torch.sum(preds == av_label.data)
 
+
     scheduler.step()
 
 
@@ -97,6 +99,8 @@ def _train_model_av_losses(model, dataloader, optimizer, criterion,
     print('AV Loss: {:.4f} A Loss: {:.4f}  V Loss: {:.4f}  AUC: {:.4f} AP: {:.4f}'.format(
           epoch_loss_av, epoch_loss_a, epoch_loss_v, epoch_auc, epoch_ap))
     return epoch_loss_av, epoch_loss_a, epoch_loss_v, epoch_auc, epoch_ap
+
+
 
 
 def _test_model_av_losses(model, dataloader, optimizer, criterion, scheduler, device):
@@ -154,31 +158,7 @@ def _test_model_av_losses(model, dataloader, optimizer, criterion, scheduler, de
 
     return epoch_loss_av, epoch_loss_a, epoch_loss_v, epoch_auc, epoch_ap
 
-"""
-def _save_predictions_to_csv(labels, predictions, original_csv_path="/home2/bstephenson/WASD/WASD/csv/val_orig.csv", output_csv_path="/home2/bstephenson/active-speakers-context/predictions.csv"):
-    # Load the original CSV
-    original_df = pd.read_csv(original_csv_path)
 
-    # Ensure the original CSV has the expected columns
-    if 'entity_id' not in original_df.columns or 'frame_timestamp' not in original_df.columns:
-        raise ValueError("Original CSV must contain 'entity_id' and 'frame_timestamp' columns.")
-
-    # Extract relevant columns
-    entity_ids = original_df['entity_id']
-    frame_timestamps = original_df['frame_timestamp']
-
-    # Create a DataFrame with the necessary columns
-    results_df = pd.DataFrame({
-        'entity_id': entity_ids,
-        'frame_timestamp': frame_timestamps,
-        'label': labels,
-        'prediction': predictions
-    })
-
-    # Save the DataFrame to a CSV file
-    results_df.to_csv(output_csv_path, index=False)
-    print(f"Predictions saved to {output_csv_path}")
-"""
 
 
 def optimize_asc(model, dataloader_train, data_loader_val, device,

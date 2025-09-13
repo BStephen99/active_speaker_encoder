@@ -2,34 +2,32 @@ import sys
 
 import torch.nn as nn
 import torch.optim as optim
-#import core.modelsOrig as mdet
 import core.models as mdet
-#import core.modelsCrossModality as mdet
+
 
 STE_inputs = {
     # input files
-    #'csv_val_full': '/home2/bstephenson/ASDNet/ava_activespeaker_train_augmented.csv',
-    'csv_val_full': '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/ava_activespeaker_val_augmented.csv',
-    #'csv_val_full': '/home2/bstephenson/ASDNet/ava_activespeaker_test_augmented.csv',
-    #csv_val_full: '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/ava_activespeaker_val_augmented.csv',
-    #csv_val_full: '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/oursBackTest.csv',
-    #'csv_val_full': '/home2/bstephenson/ASDNet/oursHighTrain.csv',
-    #'csv_val_full': '/home2/bstephenson/ASDNet/oursHighTrain.csv',
-    #'csv_val_full': '/home2/bstephenson/ASDNet/oursHighTest.csv',
+    'ava_csv_train_full': '/path/to/ava/ava_activespeaker_train_augmented.csv',
+    'ava_csv_val_full': '/path/to/ava/ava_activespeaker_val_augmented.csv',
+    'ava_csv_test_full': '/path/to/ava/ava_activespeaker_test_augmented.csv',
 
-    #'csv_val_full':'/home2/bstephenson/WASD/WASD/csv/train_orig.csv',
-    #'csv_val_full':'/home2/bstephenson/WASD/WASD/csv/val_orig.csv',
+    'csv_train_full': '/path/to/peppermint/annotations.csv',
+
+    'wasd_csv_train_full': '/path/to/wasd/csv/train_orig.csv',
+    'wasd_csv_val_full': '/path/to/wasd/csv/val_orig.csv',
 
     # Data config
-    #'audio_dir': '..../instance_wavs_time/',
-    'audio_dir': '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/slice_audio',
-    #'audio_dir': '/home2/bstephenson/ASDNet/slice_audio_ours/',
-    #'audio_dir':'/home2/bstephenson/WASD/WASD/clips_audios/',
-    'video_dir': '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/crops',
-    #'video_dir': '/home2/bstephenson/ASDNet/cropsOurs/',
-    #'video_dir': '/media/brooke/PPM_Brooke/Mine/ASDNet/ASDNet/cropsOurs/back',
-    #'video_dir':"/home2/bstephenson/WASD/WASD/clips_videos/",
-    'models_out':'/home/brooke/Documents/active-speakers-context/active-speakers-context/model'
+    'ava_audio_dir': '/path/to/ava/slice_audio',
+    'wasd_audio_dir': '/path/to/wasd/clips_audios/',
+    'audio_dir': '/path/to/peppermint/slice_audio_ours',
+
+    'ava_video_dir': '/path/to/ava/crops',
+    'wasd_video_dir': '/path/to/wasd/clips_videos/',
+    'video_dir': '/path/to/peppermint/cropsOurs',
+
+    'mode': "pepper_back", #pepper_back, pepper_high, ava_train, ava_test or wasd_train, wasd_test  -choose the dataset to process in the forward phase.
+
+    'models_out':'./model'
 }
 
 ASC_inputs = {
@@ -62,8 +60,7 @@ STE_optimization_params = {
 
     # Batch Config
     'batch_size': 64,
-    #'batch_size': 32,
-    'threads': 4
+    'threads': 0
 }
 
 STE_forward_params = {

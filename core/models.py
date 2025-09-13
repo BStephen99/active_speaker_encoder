@@ -266,11 +266,8 @@ class TwoStreamResNet(nn.Module):
         v = v.reshape(v.size(0), -1)
         if a.shape[0] != v.shape[0]:
             v = v.view(-1, self.rgb_stack_size, a.shape[1])
-            #print("visual",v[0][0][0:20])
             v = v.mean(1)
-            #print(v[0][-20:])
         stream_feats = torch.cat((a, v), 1)
-        #print("******")
 
         # auxiliary supervisions
         a = self.fc_128_a(a)
@@ -308,6 +305,8 @@ def make_temporal_shift(net, n_segment, n_div=8):
     net.v_layer4 = make_block_temporal(net.v_layer4, n_segment)
 
 def _load_weights_into_two_stream_resnet(model, rgb_stack_size, arch, progress):
+
+
     resnet_state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
 
     own_state = model.state_dict()
@@ -354,23 +353,6 @@ def _two_stream_resnet(arch, block, layers, pretrained, progress, rgb_stack_size
         model = _load_weights_into_two_stream_resnet(model, rgb_stack_size, arch, progress)
     else:
         make_temporal_shift(model, rgb_stack_size)
-    ###changed**********************************************
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder/100.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/GraVi-T/resnet18-tsm-aug.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder/200Cleaned.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder/11.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_overlapNoise/4.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_WASD/89.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_AllCombined/Alltogether29.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_AllCombined/88.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_AllCombined_FilteredSet/60.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home2/bstephenson/active-speakers-context/model/ste_encoder_OURS_FilteredSet/60.pth'))
-    #model = manual_load_state_dict(model, torch.load('/home/brooke/Documents/active-speakers-context/model/ste_encoder_AVA/AVA76.pth'))
-    model = manual_load_state_dict(model, torch.load('/home/brooke/Documents/active-speakers-context/active-speakers-context/model/ste_encoder_OURS_FilteredSet/60.pth'))
-    #print("load resnet model")
-    #print(pretrained)
-    #model = manual_load_state_dict(model, torch.load(pretrained))
-    print("load gravit model@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
     return model
 
 
@@ -393,11 +375,10 @@ def resnet18_two_streams(pretrained=False, progress=True, rgb_stack_size=11,
 
 def resnet18_two_streams_forward(pretrained_weights_path, progress=True, rgb_stack_size=11,
                                  num_classes=2, **kwargs):
+    print("pretrained weights",pretrained_weights_path)
     model = _two_stream_resnet('resnet18', BasicBlock, [2, 2, 2, 2], False, progress,
                                rgb_stack_size, num_classes, **kwargs)
     model = manual_load_state_dict(model, torch.load(pretrained_weights_path, map_location=torch.device('cpu')))
-    print(pretrained_weights_path)
-    print("manually load pretrained")
     model.eval()
     return model
 

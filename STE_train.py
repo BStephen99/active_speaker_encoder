@@ -13,6 +13,8 @@ from core.util import configure_backbone
 import core.custom_transforms as ct
 import core.config as exp_conf
 
+from torch.utils.data import ConcatDataset
+
 
 if __name__ == '__main__':
     #experiment Reproducibility
@@ -25,14 +27,7 @@ if __name__ == '__main__':
     image_size = (144, 144) #Dont forget to assign this same size on ./core/custom_transforms
 
     # check these 3 are in order, everythine else is kind of automated
-    #model_name = 'ste_encoder
-    #model_name = 'ste_encoder_overlapNoise'
-    #model_name = 'ste_encoder_Ours'
-    #model_name = 'ste_encoder_AllCombined'
-    #model_name = 'ste_encoder_WASD'
-    #model_name = 'ste_encoder_AllCombined_FilteredSet'
-    model_name = 'ste_encoder_OURS_FilteredSet'
-    #model_name = 'ste_encoderCrossModal'
+    model_name = 'ste_encoder_tester'
     io_config = exp_conf.STE_inputs
     opt_config = exp_conf.STE_optimization_params
     opt_config['batch_size'] = 128
@@ -59,130 +54,81 @@ if __name__ == '__main__':
         'val': ct.video_val
     }
 
-    #video_train_path = os.path.join(io_config['video_dir'], 'train')
-    #video_train_path1 = os.path.join("/home2/bstephenson/ASDNet/cropsOurs/", 'train')
-    video_train_path1 = os.path.join("/home2/bstephenson/ASDNet/cropsOurs/", 'back')
-    video_train_path4 = os.path.join("/home2/bstephenson/ASDNet/cropsOurs/", 'high')
-    video_train_path2 = os.path.join("/home2/bstephenson/ASDNet/crops/", 'train')
-    video_train_path3 = os.path.join("/home2/bstephenson/WASD/WASD/clips_videos/", 'train')
-
-    #audio_train_path = os.path.join(io_config['audio_dir'], 'train')
-    audio_train_path1 = os.path.join("/home2/bstephenson/ASDNet/slice_audio_ours/", 'back')
-    audio_train_path4 = os.path.join("/home2/bstephenson/ASDNet/slice_audio_ours/", 'high')
-    audio_train_path2 = os.path.join("/home2/bstephenson/ASDNet/slice_audio/", 'train')
-    audio_train_path3 = os.path.join("/home2/bstephenson/WASD/WASD/clips_audios/", 'train')
 
 
-    #video_val_path = os.path.join(io_config['video_dir'], 'val')
-    #video_val_path = os.path.join("/home2/bstephenson/ASDNet/crops/", 'val')
-    video_val_path = os.path.join("/home2/bstephenson/WASD/WASD/clips_videos/", 'val')
-    #audio_val_path = os.path.join(io_config['audio_dir'], 'val')
-    #audio_val_path = os.path.join('/home2/bstephenson/ASDNet/slice_audio/', 'val')
-    audio_val_path = os.path.join("/home2/bstephenson/WASD/WASD/clips_audios/", 'val')
+    back_video_train_path = os.path.join(io_config['video_dir'], 'back')
+    high_video_train_path = os.path.join(io_config['video_dir'], 'high')
+    ava_video_train_path = os.path.join(io_config['ava_video_dir'], 'train')
+    wasd_video_train_path = os.path.join(io_config['wasd_video_dir'], 'train')
 
-    """
-    d_train = AudioVideoDatasetAuxLosses(audio_train_path, video_train_path,
-                                      io_config['csv_train_full'], clip_lenght,
-                                      image_size, video_data_transforms['train'],
-                                      do_video_augment=True)
-    """
+    back_audio_train_path = os.path.join(io_config['audio_dir'], 'back')
+    high_audio_train_path = os.path.join(io_config['audio_dir'], 'high')
+    ava_audio_train_path = os.path.join(io_config['ava_audio_dir'], 'train')
+    wasd_audio_train_path = os.path.join(io_config['wasd_audio_dir'], 'train')
 
-    """
-    d_train1 = AudioVideoDatasetAuxLosses(audio_train_path1, video_train_path1,
-                                      '/home2/bstephenson/ASDNet/ava220928.csv', clip_lenght,
-                                      image_size, video_data_transforms['train'],
-                                      do_video_augment=True)
-    print("loaded")
-    """
+    back_video_val_path = os.path.join(io_config['video_dir'], 'back')
+    high_video_val_path = os.path.join(io_config['video_dir'], 'high')
+    wasd_video_val_path = os.path.join(io_config['wasd_video_dir'], 'val')
+    ava_video_val_path = os.path.join(io_config['ava_video_dir'], 'val')
 
-    d_train1 = AudioVideoDatasetAuxLosses(audio_train_path1, video_train_path1,
-                                      '/home2/bstephenson/ASDNet/oursBackTrain.csv', clip_lenght,
-                                      image_size, video_data_transforms['train'],
-                                      do_video_augment=True)
+    back_audio_val_path = os.path.join(io_config['audio_dir'], 'back')
+    high_audio_val_path = os.path.join(io_config['audio_dir'], 'high')
+    wasd_audio_val_path = os.path.join(io_config['wasd_audio_dir'], 'val')
+    ava_audio_val_path = os.path.join(io_config['ava_audio_dir'], 'val')
+
+   
+  
+
+    def make_dataset(name, split):
+      """Factory to create datasets only when needed."""
+      if name == "back":
+          audio, video, csv = back_audio_train_path, back_video_train_path, io_config['csv_train_full']
+      elif name == "high":
+          audio, video, csv = high_audio_train_path, high_video_train_path, io_config['csv_train_full']
+      elif name == "ava":
+          if split == "train":
+              audio, video, csv = ava_audio_train_path, ava_video_train_path, io_config["ava_csv_train_full"]
+          else:
+              audio, video, csv = ava_audio_val_path, ava_video_val_path, io_config["ava_csv_val_full"]
+      elif name == "wasd":
+          if split == "train":
+              audio, video, csv = wasd_audio_train_path, wasd_video_train_path, io_config["wasd_csv_train_full"]
+          else:
+              audio, video, csv = wasd_audio_val_path, wasd_video_val_path, io_config["wasd_csv_val_full"]
+      else:
+          raise ValueError(f"Unknown dataset name: {name}")
+
+      transform = video_data_transforms['train'] if split == "train" else video_data_transforms['val']
+      do_video_augment = (split == "train")
+
+      return AudioVideoDatasetAuxLosses(audio, video, csv, clip_lenght, image_size,
+                                        transform, do_video_augment=do_video_augment,
+                                        train_or_test=split)
+
+
+
+
+    train_names = ["back", "high"]               # choose here
+    val_names   = ["back", "high", "ava"]        # or ["ava", "wasd"], etc.
+
+    train_datasets = [make_dataset(name, "train") for name in train_names]
+    val_datasets   = [make_dataset(name, "test") for name in val_names]
+
+    combined_train = ConcatDataset(train_datasets)
+    combined_val   = ConcatDataset(val_datasets)
 
     
-    d_train2 = AudioVideoDatasetAuxLosses(audio_train_path2, video_train_path2,
-                                      '/home2/bstephenson/ASDNet/ava_activespeaker_train_augmented.csv', clip_lenght,
-                                      image_size, video_data_transforms['train'],
-                                      do_video_augment=True)
-
-    
-
-    d_train3 = AudioVideoDatasetAuxLosses(audio_train_path4, video_train_path4,
-                                      '/home2/bstephenson/ASDNet/oursHighTrain.csv', clip_lenght,
-                                      image_size, video_data_transforms['train'],
-                                      do_video_augment=True)
-
-    """
-    d_train4 = AudioVideoDatasetAuxLosses(audio_train_path1, video_train_path1,
-                                      #'/home2/bstephenson/ASDNet/ava220926downsample.csv', clip_lenght,
-                                      '/home2/bstephenson/ASDNet/ava220926.csv', clip_lenght,
-                                      image_size, video_data_transforms['train'],
-                                      do_video_augment=True)
-    """
-    
-
-    d_train5 = AudioVideoDatasetAuxLosses(audio_train_path3, video_train_path3,
-                                      '/home2/bstephenson/WASD/WASD/csv/train_orig.csv', clip_lenght,
-                                      image_size, video_data_transforms['train'],
-                                      do_video_augment=True)
-
-    """
-    d_val = AudioVideoDatasetAuxLosses(audio_val_path, video_val_path,
-                                    '/home2/bstephenson/ASDNet/ava_activespeaker_val_augmented.csv', clip_lenght,
-                                    image_size, video_data_transforms['val'],
-                                    do_video_augment=False)
-
-
-    d_train2 = AudioVideoDatasetAuxLosses(audio_train_path2, video_train_path2,
-                                      '/home2/bstephenson/ASDNet/ava_activespeaker_train_augmented.csv', clip_lenght,
-                                      image_size, video_data_transforms['train'],
-                                      do_video_augment=True)
-
-    d_val = AudioVideoDatasetAuxLosses(audio_val_path, video_val_path,
-                                    '/home2/bstephenson/ASDNet/ava_activespeaker_val_augmented.csv', clip_lenght,
-                                    image_size, video_data_transforms['val'],
-                                    do_video_augment=False)
 
 
 
-    d_train2 = AudioVideoDatasetAuxLosses(audio_train_path2, video_train_path2,
-                                      '/home2/bstephenson/WASD/WASD/csv/train_orig.csv', clip_lenght,
-                                      image_size, video_data_transforms['train'],
-                                      do_video_augment=True)
-
-    """
-    """
-    d_val = AudioVideoDatasetAuxLosses(audio_val_path, video_val_path,
-                                    '/home2/bstephenson/WASD/WASD/csv/val_orig.csv', clip_lenght,
-                                    image_size, video_data_transforms['val'],
-                                    do_video_augment=False)
-    """
-
-    d_val1 = AudioVideoDatasetAuxLosses(audio_train_path1, video_train_path1,
-                                      '/home2/bstephenson/ASDNet/oursBackTest.csv', clip_lenght,
-                                      image_size, video_data_transforms['val'],
-                                      do_video_augment=True)
-
-    d_val2 = AudioVideoDatasetAuxLosses(audio_train_path4, video_train_path4,
-                                      '/home2/bstephenson/ASDNet/oursHighTest.csv', clip_lenght,
-                                      image_size, video_data_transforms['val'],
-                                      do_video_augment=True)
+    # DataLoaders
+    dl_train = DataLoader(combined_train, batch_size=opt_config['batch_size'],
+                          shuffle=True, num_workers=opt_config['threads'], pin_memory=True)
 
 
-    #print(len(d_train2))
 
-
-    #dl_train = DataLoader(d_train3, batch_size=opt_config['batch_size'],
-    #                      shuffle=True, num_workers=opt_config['threads'])
-    #dl_train = DataLoader(d_train1 + d_train2 + d_train3 + d_train5, batch_size=opt_config['batch_size'],
-    #                      shuffle=True, num_workers=opt_config['threads'])
-    dl_train = DataLoader(d_train1 + d_train3, batch_size=opt_config['batch_size'],
-                          shuffle=True, num_workers=opt_config['threads'])
-    #dl_train = DataLoader(d_train2, batch_size=opt_config['batch_size'],
-    #                      shuffle=True, num_workers=opt_config['threads'])
-    dl_val = DataLoader(d_val1 + d_val2, batch_size=opt_config['batch_size'],
-                        shuffle=True, num_workers=opt_config['threads'])
+    dl_val = DataLoader(combined_val, batch_size=opt_config['batch_size'],
+                          shuffle=True, num_workers=opt_config['threads'], pin_memory=True)
 
     model = optimize_av_losses(backbone, dl_train, dl_val, device,
                                   criterion, optimizer, scheduler,

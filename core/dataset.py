@@ -11,13 +11,28 @@ from torch.utils import data
 from torchvision.transforms import RandomCrop
 
 
-#from speechbrain.inference.speaker import EncoderClassifier
-#classifier = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
+from speechbrain.inference.speaker import EncoderClassifier
+classifier = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
 
 import numpy as np
 import core.io as io
 import core.clip_utils as cu
 import multiprocessing as mp
+
+import core.config as exp_conf
+
+io_config = exp_conf.STE_inputs
+
+
+def convert_entity_id(entity_id: str) -> str:
+        """
+        Convert '220927_CLIP_43_person5' → '220927_CLIP_43:person5'
+        by replacing the last underscore with a colon.
+        """
+        if "_" not in entity_id:
+            return entity_id  # nothing to change
+        parts = entity_id.rsplit("_", 1)  # split only at the last underscore
+        return f"{parts[0]}:{parts[1]}"
 
 
 
@@ -47,27 +62,27 @@ class CachedAVSource(data.Dataset):
 
 
 
-    def _cache_entity_data(self, csv_file_path):
+    def _cache_entity_data(self, csv_file_path, train_or_test):
         entity_set = set()
-        print(csv_file_path)
+        print("CSV path", csv_file_path)
         csv_data = io.csv_to_list(csv_file_path)
-        #print(csv_data[0])
         videoIndex = csv_data[0].index("video_id")
         entityIndex = csv_data[0].index("entity_id")
         timeIndex = csv_data[0].index("frame_timestamp")
         labelIndex = csv_data[0].index("label_id")
+        setIndex=False
+        if "set" in csv_data[0]:
+            setIndex = csv_data[0].index("set")
         csv_data.pop(0)  # CSV header
         for csv_row in csv_data:
-            #video_id = csv_row[0]
             video_id = csv_row[videoIndex]
-            #entity_id = csv_row[-3]
             entity_id = csv_row[entityIndex]
-            #timestamp = csv_row[1]
             timestamp = csv_row[timeIndex]
+            if setIndex:
+                if csv_row[setIndex] != train_or_test:
+                    continue
 
-            #speech_label = self._postprocess_speech_label(csv_row[-2])
             speech_label = self._postprocess_speech_label(csv_row[labelIndex])
-            #entity_label = self._postprocess_entity_label(csv_row[-2])
             entity_label = self._postprocess_entity_label(csv_row[labelIndex])
             minimal_entity_data = (entity_id, timestamp, entity_label)
 
@@ -94,16 +109,17 @@ class CachedAVSource(data.Dataset):
     def _cache_entity_data_forward(self, csv_file_path, target_video):
         entity_list = list()
 
+        print("CSV", csv_file_path)
         csv_data = io.csv_to_list(csv_file_path)
         videoIndex = csv_data[0].index("video_id")
+        print("video index", videoIndex)
         entityIndex = csv_data[0].index("entity_id")
         timeIndex = csv_data[0].index("frame_timestamp")
         labelIndex = csv_data[0].index("label_id")   
         csv_data.pop(0)  # CSV header
         #if "2209" in csv_file_path and "H" in csv_file_path:
         #    dataOrigin = 0
-        #print(csv_file_path)
-        if "2209" in csv_file_path:
+        if io_config['mode'] == "pepper":
             dataOrigin = 1
         else:
             dataOrigin = 0
@@ -142,13 +158,18 @@ class CachedAVSource(data.Dataset):
 
         return entity_list
 
+
+
     def _entity_list_postprocessing(self, entity_set):
         print('Initial', len(entity_set))
 
         # filter out missing data on disk
+
         all_disk_data = set(os.listdir(self.video_root))
+        all_disk_data_underscore = {convert_entity_id(e) for e in all_disk_data}
+
         for video_id, entity_id in entity_set.copy():
-            if entity_id not in all_disk_data:
+            if entity_id not in all_disk_data and entity_id not in all_disk_data_underscore:
                 #print(video_id)
                 entity_set.remove((video_id, entity_id))
         print('Pruned not in disk', len(entity_set))
@@ -157,12 +178,13 @@ class CachedAVSource(data.Dataset):
 
 class AudioVideoDatasetAuxLosses(CachedAVSource):
     def __init__(self, audio_root, video_root, csv_file_path, clip_lenght,
-                 target_size, video_transform=None, do_video_augment=False):
+                 target_size, video_transform=None, do_video_augment=False, train_or_test=""):
         super().__init__()
 
         # Data directories
         self.audio_root = audio_root
         self.video_root = video_root
+        self.train_or_test = train_or_test
 
         # Post-processing
         self.video_transform = video_transform
@@ -173,7 +195,7 @@ class AudioVideoDatasetAuxLosses(CachedAVSource):
         self.half_clip_length = math.floor(self.clip_lenght/2)
         self.target_size = target_size
 
-        entity_set = self._cache_entity_data(csv_file_path)
+        entity_set = self._cache_entity_data(csv_file_path, self.train_or_test)
         self._entity_list_postprocessing(entity_set)
 
     def __len__(self):

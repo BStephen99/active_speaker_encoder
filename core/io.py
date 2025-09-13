@@ -10,6 +10,7 @@ import json
 import torch
 import random
 from scipy.io import wavfile
+import re
 
 from speechbrain.inference.speaker import EncoderClassifier
 classifier = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
@@ -35,20 +36,61 @@ def modify_file_path(path):
         # If the base name is not a number, return the original path
         return path
 
+
+
+
 def get_valid_path(path: str) -> str:
     """
-    Returns the original path if it exists, otherwise tries replacing the last colon with an underscore.
+    Returns a valid path among several possible variants:
+    1. Original path
+    2. Path with frame timestamp formatted to two decimals
+    3. Path with colon replaced by underscore
+    4. Path with both colon replaced + two decimals
+
+    Raises FileNotFoundError if none exist.
     """
+    #print(path)
+
     if os.path.exists(path):
         return path
 
-    # Replace only the colon before the instance number (not timestamps)
-    alt_path = path.replace(":", "_", 1)  
+    # --- Variant 1: two-decimal formatting in the filename ---
+    match = re.search(r"(\d+(\.\d+)?)(\.jpg)$", path)
+    if match:
+        num_str = match.group(1)
+        try:
+            num = float(num_str)
+            two_dec = f"{num:.2f}"
+            alt_path_dec = path.replace(num_str, two_dec)
+            if os.path.exists(alt_path_dec):
+                return alt_path_dec
+        except ValueError:
+            pass
+
+    # --- Variant 2: colon replaced with underscore ---
+    alt_path = path.replace(":", "_", 1)
+    #print(alt_path)
     if os.path.exists(alt_path):
         return alt_path
 
-    # If neither exists, return the original (or raise an error if you'd prefer)
+    # --- Variant 3: colon replaced + two decimals ---
+    if match:
+        num_str = match.group(1)
+        try:
+            num = float(num_str)
+            two_dec = f"{num:.2f}"
+            alt_path_both = alt_path.replace(num_str, two_dec)
+            if os.path.exists(alt_path_both):
+                return alt_path_both
+        except ValueError:
+            pass
+
+    print(f"No valid path found for {path}")
     return path
+    # If nothing works, raise an error
+    #raise FileNotFoundError(f"No valid path found for {path}")
+
+
 
 def preprocessRGBData(rgb_data):
     rgb_data = rgb_data.astype('float32')
@@ -109,7 +151,6 @@ def csv_to_list(csv_path):
     with open(csv_path, 'r') as f:
         reader = csv.reader(f)
         as_list = list(reader)
-        #print(as_list)
     return as_list
 
 
@@ -177,8 +218,6 @@ def load_av_clip_from_metadata(clip_meta_data, frames_source, audio_source,
     entity_id = clip_meta_data[0][0]
 
     selected_frames = [os.path.join(frames_source, entity_id, ts+'.jpg') for ts in ts_sequence]
-    #print(selected_frames)
-    #selected_frames = [round_filename(path) for path in selected_frames]
     video_data = [_pil_loader(sf, target_size) for sf in selected_frames]
     audio_file = os.path.join(audio_source, entity_id+'.wav')
     audio_file = get_valid_path(audio_file) #check if : filepath exist, else convert path to _
@@ -191,20 +230,11 @@ def load_av_clip_from_metadata(clip_meta_data, frames_source, audio_source,
         print(audio_file)
         print("no audio no audio no audio no audio no audio no audio no audio")
 
-    offset_dict = {}
 
-    if entity_id.split(":")[0] in offset_dict:
-        if "220926" in entity_id:
-            print("offset", offset_dict[entity_id.split(":")[0]]/30)
-            videoOffset = 0 # -offset_dict[entity_id.split(":")[0]]/30
-        else:
-            print("offset", offset_dict[entity_id.split(":")[0]]/25)
-            videoOffset = 0 # -offset_dict[entity_id.split(":")[0]]/25
-    else:
-        videoOffset = 0
-    audio_start = int((min_ts-audio_offset-videoOffset)*sample_rate)
+
+    audio_start = int((min_ts-audio_offset)*sample_rate)
     print("start", audio_start/sample_rate)
-    audio_end = int((max_ts-audio_offset-videoOffset)*sample_rate)
+    audio_end = int((max_ts-audio_offset)*sample_rate)
     print("end", audio_end/sample_rate)
     audio_clip = audio_data[audio_start:audio_end]
 
@@ -219,10 +249,7 @@ def load_av_clip_from_metadata(clip_meta_data, frames_source, audio_source,
     speakerEmb_np = speakerEmb[0][0].squeeze().cpu().numpy().astype(np.float32)
     print("sembshape",type(speakerEmb_np))
 
-    #wavfile.write('/home2/bstephenson/overlap1.wav', 16000, audio_clip)
-    #if "train" in audio_file:
-    #    print("train, train********************************************")
-        #audio_clip = overlap(audio_clip, noise_audio_data)
+
     audio_features = _generate_mel_spectrogram(audio_clip, sample_rate)
 
     return video_data, audio_features, speakerEmb_np
